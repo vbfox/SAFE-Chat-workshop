@@ -1,3 +1,4 @@
+[<AutoOpen>]
 module Utils
 
 open Fable.React

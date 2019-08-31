@@ -19,7 +19,8 @@ let root model dispatch =
         | _ ->
             [ div [] [ str "bad channel route" ] ]
 
-    div [ ClassName "container" ] 
-        [ div [ ClassName "col-md-4 fs-menu" ] 
-              (NavMenu.View.menu model.chat model.currentPage (ApplicationMsg >> ChatDataMsg >> dispatch))
+    let menu = NavMenu.View.menu { chatData = model.chat; currentPage = model.currentPage; dispatch = (ApplicationMsg >> ChatDataMsg >> dispatch) }
+
+    div [ ClassName "container" ]
+        [ menu
           div [ ClassName "col-xs-12 col-md-8 fs-chat" ] mainArea ]
