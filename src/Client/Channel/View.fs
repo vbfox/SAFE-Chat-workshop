@@ -136,9 +136,16 @@ type ChannelProps = {
     dispatch: Msg -> unit
 }
 
+let maxListLength (len: int) (lst: list<_>) =
+  let listLength = lst.Length
+  if listLength > len then
+      lst |> List.skip (listLength - len)
+  else
+      lst
+
 let channel = elmishView "Channel" ByRef <| fun { model = model; dispatch = dispatch; } ->
     fragment []
       [ chatInfo { chan = model.Info; dispatch = dispatch }
-        messageList model.Messages
+        messageList (model.Messages |> maxListLength 1000)
         messageInput dispatch model
       ]
