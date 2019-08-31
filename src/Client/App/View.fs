@@ -7,7 +7,12 @@ open Connection.Types
 open Fable.React
 open Props
 
-let root model dispatch =
+type RootProps = {
+    model: App.Types.Model
+    dispatch: App.Types.Msg -> unit
+}
+
+let root = elmishView "Root" NoMemoization <| fun { model = model; dispatch = dispatch; } ->
     let mainArea =
         match model.currentPage, model.chat with
         | Route.Overview, _ -> [ Overview.View.root ]
