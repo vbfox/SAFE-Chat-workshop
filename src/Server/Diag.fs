@@ -47,9 +47,31 @@ let spamText =
         "Spam spam spam spam. Lovely spam! Wonderful spam! Spam spa-a-a-a-a-am spam spa-a-a-a-a-am spam. Lovely spam! Lovely spam! Lovely spam! Lovely spam! Lovely spam! Spam spam spam spam! "
     ]
 
+type SpamSpeed =
+    | Slow
+    | Medium
+    | Fast
+    | Viking
+
+    member this.TimerPeriod: int =
+        match this with
+        | Slow -> 5000
+        | Medium -> 1000
+        | Fast -> 500
+        | Viking -> 100
+
+    static member ParseCommand(cmd: string) =
+        match cmd.Trim().ToLowerInvariant() with
+        | "#slow" -> Some Slow
+        | "#medium" -> Some Medium
+        | "#fast" -> Some Fast
+        | "#viking" -> Some Viking
+        | _ -> None
+
 /// Creates an actor for echo bot.
 let createEchoActor (getUser: GetUser) (system: ActorSystem) (botUserId: UserId) (chan: ChannelData) =
     let mutable spamLine = 0
+    let mutable spamSpeed = Slow
     let onTimer _ =
         let msg = spamText.[spamLine]
         spamLine <- (spamLine + 1) % spamText.Length
@@ -57,7 +79,7 @@ let createEchoActor (getUser: GetUser) (system: ActorSystem) (botUserId: UserId)
         chan.channelActor <! ChannelCommand (PostMessage (botUserId, Message msg))
         ()
 
-    spamTimer <- Some (new System.Threading.Timer(onTimer, null, 0, 100))
+    spamTimer <- Some (new System.Threading.Timer(onTimer, null, 0, spamSpeed.TimerPeriod))
 
     let getPersonNick {identity = identity; nick = nick} =
         match identity with
@@ -77,9 +99,20 @@ let createEchoActor (getUser: GetUser) (system: ActorSystem) (botUserId: UserId)
             let! reply =
                 match msg with
                 | ChatMessage { author = author; message = Message message} ->
-                    forUser author (fun nickName -> sprintf "%s said: %s" nickName message)
+                    if author <> botUserId then
+                        logger.debug (Message.eventX "{user} said {message}" >> Message.setFieldValue "user" author >> Message.setFieldValue "message" message)
+                        let newSpeed = SpamSpeed.ParseCommand message
+                        match newSpeed with
+                        | Some newSpeed ->
+                            logger.debug (Message.eventX "Changing speed to {speed}" >> Message.setFieldValue "speed" newSpeed)
+                            spamSpeed <- newSpeed
+                            spamTimer.Value.Change(0, spamSpeed.TimerPeriod) |> ignore
+                            forUser author (fun nickName -> sprintf "%s changed speed to %A" nickName newSpeed)
+                        | _ -> async.Return None
+                    else
+                        async.Return None
                 | Joined { user = user} ->
-                    forUser user (fun nickName -> sprintf "Welcome aboard, %s!" nickName)
+                    forUser user (fun nickName -> sprintf "Welcome aboard, %s speed is %A say #slow #medium #fast or #viking to set my speed!" nickName spamSpeed)
                 | _ -> async.Return None
 
             match reply with
