@@ -12,10 +12,47 @@ let private logger = Log.create "bot"
 
 let mutable private spamTimer: System.Threading.Timer option = None
 
+let spamText =
+    [
+        "You sit here, dear."
+        "All right."
+        "Morning!"
+        "Morning!"
+        "Well, what've you got?"
+        "Well, there's egg and bacon; egg sausage and bacon; egg and spam; egg bacon and spam; egg bacon sausage and spam; spam bacon sausage and spam; spam egg spam spam bacon and spam; spam sausage spam spam bacon spam tomato and spam;"
+        "Spam spam spam spam..."
+        "...spam spam spam egg and spam; spam spam spam spam spam spam baked beans spam spam spam..."
+        "Spam! Lovely spam! Lovely spam!"
+        "...or Lobster Thermidor au Crevette with a Mornay sauce served in a Provencale manner with shallots and aubergines garnished with truffle pate, brandy and with a fried egg on top and spam."
+        "Have you got anything without spam?"
+        "Well, there's spam egg sausage and spam, that's not got much spam in it."
+        "I don't want ANY spam!"
+        "Why can't she have egg bacon spam and sausage?"
+        "THAT'S got spam in it!"
+        "Hasn't got as much spam in it as spam egg sausage and spam, has it?"
+        "Spam spam spam spam (crescendo through next few lines)"
+        "Could you do the egg bacon spam and sausage without the spam then?"
+        "Urgghh!"
+        "What do you mean 'Urgghh'? I don't like spam!"
+        "Lovely spam! Wonderful spam!"
+        "Shut up!"
+        "Lovely spam! Wonderful spam!"
+        "Shut up! (Vikings stop) Bloody Vikings! You can't have egg bacon spam and sausage without the spam."
+        "I don't like spam!"
+        "Sshh, dear, don't cause a fuss. I'll have your spam. I love it. I'm having spam spam spam spam spam spam spam beaked beans spam spam spam and spam!"
+        "Spam spam spam spam. Lovely spam! Wonderful spam!"
+        "Shut up!! Baked beans are off."
+        "Well could I have her spam instead of the baked beans then?"
+        "You mean spam spam spam spam spam spam... (but it is too late and the Vikings drown her words)"
+        "Spam spam spam spam. Lovely spam! Wonderful spam! Spam spa-a-a-a-a-am spam spa-a-a-a-a-am spam. Lovely spam! Lovely spam! Lovely spam! Lovely spam! Lovely spam! Spam spam spam spam! "
+    ]
+
 /// Creates an actor for echo bot.
 let createEchoActor (getUser: GetUser) (system: ActorSystem) (botUserId: UserId) (chan: ChannelData) =
+    let mutable spamLine = 0
     let onTimer _ =
-        let msg = "Lovely spam! Wonderful spam!"
+        let msg = spamText.[spamLine]
+        spamLine <- (spamLine + 1) % spamText.Length
         //logger.debug (Message.eventX "Sending spam to {chan}" >> Message.setFieldValue "chan" chan.cid)
         chan.channelActor <! ChannelCommand (PostMessage (botUserId, Message msg))
         ()
