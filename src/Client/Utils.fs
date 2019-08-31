@@ -1,8 +1,10 @@
 [<AutoOpen>]
 module Utils
 
+open Fable.Core
 open Fable.React
 
+[<StringEnum>]
 type ComponentEquality =
     | ByRef
     | ByValue

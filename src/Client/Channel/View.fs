@@ -45,13 +45,18 @@ let chanUsers (users: Map<string, UserInfo>) =
               li [] [str <| screenName u.Value]
           ]]
 
-let chatInfo dispatch (model: Model) =
+type ChannelInfoProps = {
+    chan: ChannelInfo
+    dispatch: Msg -> unit
+}
+
+let chatInfo = elmishView "ChannelInfo" ByRef <| fun { chan = chan; dispatch = dispatch; } ->
   div
     [ ClassName "fs-chat-info" ]
     [ h1
-        [] [ str model.Info.Name ]
+        [] [ str chan.Name ]
       span
-        [] [ str model.Info.Topic ]
+        [] [ str chan.Topic ]
       button
         [ Id "leaveChannel"
           ClassName "btn"
@@ -60,39 +65,71 @@ let chatInfo dispatch (model: Model) =
         [ i [ ClassName "mdi mdi-door-closed mdi-18px" ] []]
     ]
 
-let message (text: string) =
-    [ reactMarkdown [Source text ]]
+let inline message (text: string) =
+    reactMarkdown [Source text ]
 
-let messageList (messages: Message Envelope list) =
+type UserMessageProps = {
+    key: string
+    text: string
+    author: UserInfo
+    ts: System.DateTime
+}
+
+let userMessage = elmishView "UserMessage" ByRef <| fun { text = text; author = author; ts = ts } ->
     div
-      [ ClassName "fs-messages" ]
-      [ for m in messages ->
-          match m.Content with
-          | UserMessage (text, user) ->
-              // Browser.Dom.console.warn (sprintf "%A %A" text user)
-              div
-                [ classList ["fs-message", true; "user", user.isMe ] ]
-                [ div
-                    []
-                    [ yield! message text
-                      yield h5  []
-                          [ span [ClassName "user"] [str user.Nick]
-                            span [ClassName "time"] [str <| formatTs m.Ts ]] ]
-                  UserAvatar.View.root user.ImageUrl
-                ]
-
-          | SystemMessage text ->
-              blockquote
-                [ ClassName ""]
-                [ str text; str " "
-                  small [] [str <| formatTs m.Ts] ]
+      [ classList ["fs-message", true; "user", author.isMe ] ]
+      [ div
+          []
+          [
+            message text
+            h5 []
+               [ span [ClassName "user"] [str author.Nick]
+                 span [ClassName "time"] [str <| formatTs ts ]] ]
+        UserAvatar.View.root author.ImageUrl
       ]
 
+type SystemMessageProps = {
+    key: string
+    text: string
+    ts: System.DateTime
+}
 
-let root (model: Model) dispatch =
-    [ chatInfo dispatch model
-      div [ ClassName "fs-splitter" ] []
-      messageList model.Messages
-      div [ ClassName "fs-splitter" ] []
-      messageInput dispatch model
-    ]
+let systemMessage = elmishView "SystemMessage" ByRef <| fun { SystemMessageProps.text = text; ts = ts } ->
+    blockquote
+      [ ClassName ""]
+      [ str text; str " "
+        small [] [str <| formatTs ts] ]
+
+type MessageListProps = {
+  Messages: Message Envelope list
+}
+
+let messageList (messages: Message Envelope list) =
+    let messagesElements =
+        [| for m in messages ->
+               match m.Content with
+               | UserMessage (text, author) ->
+                   userMessage { text = text; author = author; ts = m.Ts; key = m.Id.ToString() }
+               | SystemMessage text ->
+                   systemMessage { text = text; ts = m.Ts; key = m.Id.ToString() }
+      |]
+    div
+      [ ClassName "fs-messages" ]
+      [ ofArray messagesElements ]
+
+type ChannelProps = {
+    model: Model
+    dispatch: Msg -> unit
+}
+
+let splitter = elmishView "Splitter" ByRef <| fun () ->
+    div [ ClassName "fs-splitter" ] []
+
+let channel = elmishView "Channel" ByRef <| fun { model = model; dispatch = dispatch; } ->
+    fragment []
+      [ chatInfo { chan = model.Info; dispatch = dispatch }
+        splitter ()
+        messageList model.Messages
+        splitter ()
+        messageInput dispatch model
+      ]
