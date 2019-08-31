@@ -4,6 +4,9 @@ module Utils
 open Fable.Core
 open Fable.React
 
+[<ImportDefault("memoize-one")>]
+let memoizeOnce<'t>(value: 't): 't = jsNative
+
 [<StringEnum>]
 type ComponentEquality =
     | ByRef
