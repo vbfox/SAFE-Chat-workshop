@@ -19,20 +19,26 @@ let private formatTs (ts: System.DateTime) =
 let inline valueOrDefault value =
     Ref <| (fun e -> if e |> isNull |> not && !!e?value <> !!value then e?value <- !!value)
 
+let splitter = elmishView "Splitter" ByRef <| fun () ->
+    div [ ClassName "fs-splitter" ] []
+
 let messageInput dispatch model =
-  div
-    [ ClassName "fs-message-input" ]
-    [ input
-        [ Type "text"
-          Placeholder "Type the message here..."
-          valueOrDefault model.PostText
-          OnChange (fun ev -> !!ev.target?value |> (SetPostText >> dispatch))
-          OnKeyPress (fun ev -> if !!ev.which = 13 || !!ev.keyCode = 13 then dispatch PostText)
+    fragment [] [
+      splitter ()
+      div
+        [ ClassName "fs-message-input" ]
+        [ input
+            [ Type "text"
+              Placeholder "Type the message here..."
+              valueOrDefault model.PostText
+              OnChange (fun ev -> !!ev.target?value |> (SetPostText >> dispatch))
+              OnKeyPress (fun ev -> if !!ev.which = 13 || !!ev.keyCode = 13 then dispatch PostText)
+            ]
+          button
+            [ ClassName "btn" ]
+            [ i [ ClassName "mdi mdi-send mdi-24px"
+                  OnClick (fun _ -> dispatch PostText) ] [] ]
         ]
-      button
-        [ ClassName "btn" ]
-        [ i [ ClassName "mdi mdi-send mdi-24px"
-              OnClick (fun _ -> dispatch PostText) ] [] ]
     ]
 
 let chanUsers (users: Map<string, UserInfo>) =
@@ -51,25 +57,27 @@ type ChannelInfoProps = {
 }
 
 let chatInfo = elmishView "ChannelInfo" ByRef <| fun { chan = chan; dispatch = dispatch; } ->
-  div
-    [ ClassName "fs-chat-info" ]
-    [ h1
-        [] [ str chan.Name ]
-      span
-        [] [ str chan.Topic ]
-      button
-        [ Id "leaveChannel"
-          ClassName "btn"
-          Title "Leave"
-          OnClick (fun _ -> dispatch Leave) ]
-        [ i [ ClassName "mdi mdi-door-closed mdi-18px" ] []]
+    fragment [] [
+      div
+        [ ClassName "fs-chat-info" ]
+        [ h1
+            [] [ str chan.Name ]
+          span
+            [] [ str chan.Topic ]
+          button
+            [ Id "leaveChannel"
+              ClassName "btn"
+              Title "Leave"
+              OnClick (fun _ -> dispatch Leave) ]
+            [ i [ ClassName "mdi mdi-door-closed mdi-18px" ] []]
+        ]
+      splitter ()
     ]
 
 let inline message (text: string) =
     reactMarkdown [Source text ]
 
 type UserMessageProps = {
-    key: string
     text: string
     author: UserInfo
     ts: System.DateTime
@@ -89,7 +97,6 @@ let userMessage = elmishView "UserMessage" ByRef <| fun { text = text; author = 
       ]
 
 type SystemMessageProps = {
-    key: string
     text: string
     ts: System.DateTime
 }
@@ -101,35 +108,37 @@ let systemMessage = elmishView "SystemMessage" ByRef <| fun { SystemMessageProps
         small [] [str <| formatTs ts] ]
 
 type MessageListProps = {
-  Messages: Message Envelope list
+    Messages: Message Envelope list
 }
+
+type MessageProps = {
+    key: string
+    message: Message Envelope
+}
+
+let messageElement = elmishView "Message" ByRef <| fun { message = message } ->
+    match message.Content with
+    | UserMessage (text, author) ->
+       userMessage { text = text; author = author; ts = message.Ts }
+    | SystemMessage text ->
+       systemMessage { text = text; ts = message.Ts }
 
 let messageList (messages: Message Envelope list) =
     let messagesElements =
-        [| for m in messages ->
-               match m.Content with
-               | UserMessage (text, author) ->
-                   userMessage { text = text; author = author; ts = m.Ts; key = m.Id.ToString() }
-               | SystemMessage text ->
-                   systemMessage { text = text; ts = m.Ts; key = m.Id.ToString() }
-      |]
+        messages |> List.map(fun m -> messageElement { key = m.Id.ToString(); message = m })
+
     div
       [ ClassName "fs-messages" ]
-      [ ofArray messagesElements ]
+      [ ofList messagesElements ]
 
 type ChannelProps = {
     model: Model
     dispatch: Msg -> unit
 }
 
-let splitter = elmishView "Splitter" ByRef <| fun () ->
-    div [ ClassName "fs-splitter" ] []
-
 let channel = elmishView "Channel" ByRef <| fun { model = model; dispatch = dispatch; } ->
     fragment []
       [ chatInfo { chan = model.Info; dispatch = dispatch }
-        splitter ()
         messageList model.Messages
-        splitter ()
         messageInput dispatch model
       ]
