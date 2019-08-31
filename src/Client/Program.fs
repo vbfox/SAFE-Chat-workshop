@@ -15,8 +15,10 @@ open App.State
 // App
 Program.mkProgram init update (fun model dispatch -> App.View.root { model = model; dispatch = dispatch })
 |> Program.toNavigable (parseHash Router.route) urlUpdate
+(*
 #if DEBUG
 |> Program.withDebugger
 #endif
+*)
 |> Program.withReactBatched "elmish-app"
 |> Program.run
