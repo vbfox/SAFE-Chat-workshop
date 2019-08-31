@@ -21,71 +21,75 @@ var CONFIG = {
     }
 };
 
-var isProduction = !process.argv.find(v => v.indexOf('webpack-dev-server') !== -1);
-var port = process.env.SUAVE_FABLE_PORT || "8083";
-console.log("Bundling for " + (isProduction ? "production" : "development") + "...");
+module.exports = (env, argv) => {
+    var isProduction = argv.mode === "production";
+    var mode = isProduction ? "production" : "development";
+    var port = process.env.SUAVE_FABLE_PORT || "8083";
+    console.log("Bundling for " + mode + "...");
 
-module.exports = {
-    devtool: "source-map",
-    entry: resolve(CONFIG.fsharpEntry),
-    output: {
-        filename: 'bundle.js',
-        path: resolve(CONFIG.outputDir),
-    },
-    devServer: {
-        proxy: [
-            {
-                context: ['/api/socket'],
-                target: 'ws://localhost:' + port,
-                ws: true
-            },
-            {
-                context: ['/api', '/', '/logon', '/logoff', '/logonfast'],
-                target: 'http://localhost:' + port,
-                changeOrigin: true
-            }],
-        hot: true,
-        inline: true
-      },
-    module: {
-        rules: [
-            {
-                test: /\.fs(x|proj)?$/,
-                use: {
-                    loader: "fable-loader",
-                    options: {
-                        babel: CONFIG.babel,
-                        define: isProduction ? [] : ["DEBUG"]
-                    }
-                }
-            },
-            {
-                test: /\.js$/,
-                exclude: /node_modules/,
-                use: {
-                    loader: 'babel-loader',
-                    options: CONFIG.babel
+    return {
+        mode,
+        devtool: "source-map",
+        entry: resolve(CONFIG.fsharpEntry),
+        output: {
+            filename: 'bundle.js',
+            path: resolve(CONFIG.outputDir),
+        },
+        devServer: {
+            proxy: [
+                {
+                    context: ['/api/socket'],
+                    target: 'ws://localhost:' + port,
+                    ws: true
                 },
-            },
-            {
-                test: /\.scss$/,
-                use: [
-                    "style-loader",
-                    "css-loader",
-                    {
-                        loader: 'sass-loader',
-                        options: { implementation: require('sass') }
+                {
+                    context: ['/api', '/', '/logon', '/logoff', '/logonfast'],
+                    target: 'http://localhost:' + port,
+                    changeOrigin: true
+                }],
+            hot: true,
+            inline: true
+        },
+        module: {
+            rules: [
+                {
+                    test: /\.fs(x|proj)?$/,
+                    use: {
+                        loader: "fable-loader",
+                        options: {
+                            babel: CONFIG.babel,
+                            define: isProduction ? [] : ["DEBUG"]
+                        }
                     }
-                ]
-            },
-            {
-                test: /\.(png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)(\?.*)?$/,
-                use: ['file-loader']
-            }            
+                },
+                {
+                    test: /\.js$/,
+                    exclude: /node_modules/,
+                    use: {
+                        loader: 'babel-loader',
+                        options: CONFIG.babel
+                    },
+                },
+                {
+                    test: /\.scss$/,
+                    use: [
+                        "style-loader",
+                        "css-loader",
+                        {
+                            loader: 'sass-loader',
+                            options: { implementation: require('sass') }
+                        }
+                    ]
+                },
+                {
+                    test: /\.(png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)(\?.*)?$/,
+                    use: ['file-loader']
+                }
+            ]
+        },
+        plugins: isProduction ? [] : [
+            new webpack.HotModuleReplacementPlugin(),
+            new webpack.NamedModulesPlugin()
         ]
-    },
-    plugins: isProduction ? [] : [
-        new webpack.HotModuleReplacementPlugin(),
-        new webpack.NamedModulesPlugin()
-    ]
+    };
 };
