@@ -2,5 +2,11 @@ module Utils
 
 open Fable.React
 
-let inline functionComponent name render = FunctionComponent.Of(render, name)
-let inline elmishView name render = FunctionComponent.Of(render, name, equalsButFunctions)
+type ComponentEquality =
+    | ByRef
+    | ByValue
+
+let inline elmishView name equality render =
+    match equality with
+    | ByValue -> FunctionComponent.Of(render, name, equalsButFunctions)
+    | ByRef -> FunctionComponent.Of(render, name, memoEqualsButFunctions)
