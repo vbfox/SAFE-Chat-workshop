@@ -26,11 +26,14 @@ let mainArea = elmishView "MainArea" NoMemoization <| fun { model = model; dispa
                 div [] [ str "bad channel route" ])
         ]
 
+let private getMenuDispatch = memoizeOnce (fun (dispatch: App.Types.Msg -> unit) ->
+    ApplicationMsg >> ChatDataMsg >> dispatch)
+
 let root = elmishView "Root" NoMemoization <| fun { model = model; dispatch = dispatch; } ->
     let menu = NavMenu.View.menu {
         chatData = NavMenu.View.menuModelFromServer model.chat
         currentPage = model.currentPage
-        dispatch = (ApplicationMsg >> ChatDataMsg >> dispatch)
+        dispatch = getMenuDispatch dispatch
     }
 
     div [ ClassName "container" ]
