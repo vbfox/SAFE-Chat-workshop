@@ -6,6 +6,8 @@
     <!-- Global to the app -->
     <Compile Include="Shared/ChatProtocol.fs" />
 
+    <Compile Include="Utils.fs" />
+
     <Compile Include="Router.fs" />
 
     <Compile Include="fable.react.markdown.fs" />
