@@ -10,6 +10,30 @@ open Channel.Types
 open ChatServer.Types
 open Connection.Types
 
+type MenuConnectionInfo = {
+    Me: Channel.Types.UserInfo
+    ChannelList: Map<ChannelId, ChannelInfo>
+    Channels: Map<ChannelId, ChannelInfo>
+    NewChanName: string option
+}
+
+type MenuModel =
+    | MenuNotConnected
+    | MenuConnecting
+    | MenuConnected of MenuConnectionInfo
+
+let menuModelFromServer (model: Model) =
+    match model with
+    | NotConnected -> MenuNotConnected
+    | Connecting -> MenuConnecting
+    | Connected { serverData = serverData } ->
+      MenuConnected {
+        Me = serverData.Me
+        ChannelList = serverData.ChannelList
+        Channels = serverData.Channels |> Map.map (fun _ ch -> ch.Info)
+        NewChanName = serverData.NewChanName
+      }
+
 let private menuItem htmlProp name topic isCurrent =
     button
       [ classList [ "btn", true; "fs-channel", true; "selected", isCurrent ]
@@ -55,7 +79,7 @@ let private user = elmishView "User" <| fun { me = me} ->
          ]
 
 type private UserChannelsProps = {
-    channels: Map<ChannelId, Channel.Types.Model>
+    channels: Map<ChannelId, ChannelInfo>
     newChanName: string option
     currentPage: Route
     dispatch: ChatServer.Types.Msg -> unit
@@ -66,7 +90,7 @@ let private userChannels = elmishView "UserChannels" <| fun { newChanName = newC
 
     let channels = [|
       for (_, ch) in channels |> Map.toSeq do
-        yield menuItemChannel { ch = ch.Info; currentPage = currentPage; key = ch.Info.Id }
+        yield menuItemChannel { ch = ch; currentPage = currentPage; key = ch.Id }
     |]
     fragment [] [
       h2 []
@@ -89,7 +113,7 @@ let private userChannels = elmishView "UserChannels" <| fun { newChanName = newC
     ]
 
 type private AllChannelsProps = {
-    channels: Map<ChannelId, Channel.Types.Model>
+    channels: Map<ChannelId, ChannelInfo>
     channelList: Map<ChannelId, ChannelInfo>
     dispatch: ChatServer.Types.Msg -> unit
 }
@@ -110,9 +134,8 @@ let private allChannels = elmishView "AllChannels" <| fun { channels = channels;
       channelList |> ofArray
     ]
 
-
 type MenuProps = {
-    chatData: Model
+    chatData: MenuModel
     currentPage: Route
     dispatch: ChatServer.Types.Msg -> unit
 }
@@ -121,11 +144,11 @@ let menu = elmishView "Menu" <| fun { chatData = chatData; currentPage = current
     div
         [ ClassName "col-md-4 fs-menu" ]
         (match chatData with
-        | NotConnected ->
+        | MenuNotConnected ->
             [ div [] [str "not connected"] ]
-        | Connecting _ ->
+        | MenuConnecting _ ->
             [ div [] [str "connecting"] ]
-        | Connected { serverData = { Me = me; NewChanName = newChanName; Channels = channels; ChannelList = channelList } } ->
+        | MenuConnected { Me = me; NewChanName = newChanName; Channels = channels; ChannelList = channelList }->
             [
                 user { me = me }
                 userChannels { newChanName = newChanName; channels = channels; currentPage = currentPage; dispatch = dispatch }

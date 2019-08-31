@@ -19,7 +19,11 @@ let root model dispatch =
         | _ ->
             [ div [] [ str "bad channel route" ] ]
 
-    let menu = NavMenu.View.menu { chatData = model.chat; currentPage = model.currentPage; dispatch = (ApplicationMsg >> ChatDataMsg >> dispatch) }
+    let menu = NavMenu.View.menu {
+        chatData = NavMenu.View.menuModelFromServer model.chat
+        currentPage = model.currentPage
+        dispatch = (ApplicationMsg >> ChatDataMsg >> dispatch)
+    }
 
     div [ ClassName "container" ]
         [ menu
