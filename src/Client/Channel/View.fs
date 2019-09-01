@@ -1,5 +1,6 @@
 module Channel.View
 
+open Browser
 open Fable.Core.JsInterop
 open Fable.React
 
@@ -8,13 +9,41 @@ open Types
 
 open Fable.ReactMarkdownImport
 
-let private formatTs (ts: System.DateTime) =
-  match (System.DateTime.Now - ts) with
-  | diff when diff.TotalMinutes < 1.0 -> "a few seconds ago"
-  | diff when diff.TotalMinutes < 30.0 -> sprintf "%i minutes ago" (int diff.TotalMinutes)
-  | diff when diff.TotalHours <= 12.0 -> ts.ToShortTimeString()
-  | diff when diff.TotalDays <= 5.0 -> sprintf "%i days ago" (int diff.TotalDays)
-  | _ -> ts.ToShortDateString()
+module private TimeDisplay =
+    open System
+
+    let private mkDisposable (f : unit -> unit): IDisposable =
+        { new IDisposable with member __.Dispose() = f() }
+
+    let private formatTs (ts: DateTime) =
+      match DateTime.Now - ts with
+      | diff when diff.TotalMinutes < 1.0 -> "a few seconds ago"
+      | diff when diff.TotalMinutes < 2.0 -> "1 minute ago"
+      | diff when diff.TotalMinutes < 30.0 -> sprintf "%i minutes ago" (int diff.TotalMinutes)
+      | diff when diff.TotalHours <= 12.0 -> ts.ToShortTimeString()
+      | diff when diff.TotalDays < 2.0 -> "1 day ago"
+      | diff when diff.TotalDays <= 5.0 -> sprintf "%i days ago" (int diff.TotalDays)
+      | _ -> ts.ToShortDateString()
+
+    type RelativeTimeDisplayProps = {
+        ts: DateTime
+    }
+
+    let private updateTimeEffect (diff: IStateHook<string>, ts: DateTime) =
+        fun () ->
+          let mutable currentValue = formatTs ts
+          let timeoutId = window.setInterval((fun () ->
+              let newValue = formatTs ts
+              if currentValue <> newValue then
+                  currentValue <- newValue
+                  diff.update(newValue)), 30 * 1000)
+          mkDisposable (fun () ->
+              window.clearInterval timeoutId)
+
+    let relative = elmishView "RelativeTimeDisplay" ByValue <| fun { ts = ts } ->
+        let textState = Hooks.useStateLazy<string>(fun () -> formatTs ts)
+        Hooks.useEffectDisposable(updateTimeEffect(textState, ts), [| box ts |])
+        str textState.current
 
 let inline valueOrDefault value =
     Ref <| (fun e -> if e |> isNull |> not && !!e?value <> !!value then e?value <- !!value)
@@ -92,7 +121,7 @@ let userMessage = elmishView "UserMessage" ByRef <| fun { text = text; author = 
             message text
             h5 []
                [ span [ClassName "user"] [str author.Nick]
-                 span [ClassName "time"] [str <| formatTs ts ]] ]
+                 span [ClassName "time"] [TimeDisplay.relative { ts = ts }]] ]
         UserAvatar.View.root author.ImageUrl
       ]
 
@@ -105,7 +134,7 @@ let systemMessage = elmishView "SystemMessage" ByRef <| fun { SystemMessageProps
     blockquote
       [ ClassName ""]
       [ str text; str " "
-        small [] [str <| formatTs ts] ]
+        small [] [TimeDisplay.relative { ts = ts }] ]
 
 type MessageListProps = {
     Messages: Message Envelope list
@@ -145,7 +174,8 @@ let maxListLength (len: int) (lst: list<_>) =
 
 let channel = elmishView "Channel" ByRef <| fun { model = model; dispatch = dispatch; } ->
     fragment []
-      [ chatInfo { chan = model.Info; dispatch = dispatch }
+      [
+        chatInfo { chan = model.Info; dispatch = dispatch }
         messageList (model.Messages |> maxListLength 1000)
         messageInput dispatch model
       ]
