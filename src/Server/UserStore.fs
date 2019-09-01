@@ -61,7 +61,7 @@ module private StoreImplementation =
         nextId = 100
         users = Map.empty
             |> Map.add UserIds.system (makeUser "system" System)
-            |> Map.add UserIds.echo (makeBot "echo")
+            |> Map.add UserIds.echo (makeBot "Monty")
     }
 
     let lookupNick nickName _ (userInfo: UserInfo) =
@@ -174,7 +174,7 @@ module private StoreImplementation =
                             |> (GetUsersResult >> reply)
                     return loop state
                 | DumpUsers ->
-                    
+
                     do logger.debug (Message.eventX "DumpUsers ({count} users)" >> Message.setFieldValue "count" (Map.count state.users))
                     for (UserId uid, user) in state.users |> Map.toList do
                         do logger.debug (Message.eventX "   {userId}: \"{nick}\"" >> Message.setFieldValue "userId" uid >> Message.setFieldValue "nick" user.nick)
