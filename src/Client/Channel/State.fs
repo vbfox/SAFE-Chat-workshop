@@ -5,7 +5,7 @@ open Types
 open Browser.Dom
 
 let init () : Model * Cmd<Msg> =
-    {Users = Map.empty; Messages = []; PostText = ""; Info = ChannelInfo.Empty}, Cmd.none
+    { NextNonUserMessageId = 1; Users = Map.empty; Messages = []; PostText = ""; Info = ChannelInfo.Empty}, Cmd.none
 
 let init2 (chan: ChannelInfo, users: UserInfo list) : Model * Cmd<Msg> =
     { (fst <| init()) with Info = chan; Users = users |> List.map (fun u -> u.Id, u) |> Map.ofList }, Cmd.none
@@ -32,7 +32,7 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
         let users = userlist |> List.map (fun u -> u.Id, u) |> Map.ofList
         let messages = messagelist |> List.map (fun (u, msg) -> mapMessage msg (mapUser users u))
         in
-        { Info = info; Messages = messages; PostText = ""; Users = users }, Cmd.none
+        { state with Info = info; Messages = messages; PostText = ""; Users = users }, Cmd.none
     | Update info ->
         { state with Info = info }, Cmd.none
 
@@ -47,10 +47,11 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
 
     | UserJoined user ->
         let systemMessage = {
-            Id = 0; Ts = System.DateTime.Now
+            Id = -state.NextNonUserMessageId; Ts = System.DateTime.Now
             Content = SystemMessage <| sprintf "%s joined the channel" user.Nick }
 
         { state with
+            NextNonUserMessageId = state.NextNonUserMessageId + 1
             Messages = state.Messages @ [systemMessage]
             Users = state.Users |> Map.add user.Id user}, Cmd.none
 
@@ -59,10 +60,11 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
             state.Users |> getUserNick user.Id |> function
             | Some oldnick when oldnick <> user.Nick ->
                 let txt = sprintf "%s is now known as %s" oldnick user.Nick
-                [{  Id = 0; Ts = System.DateTime.Now; Content = SystemMessage txt }]
+                [{  Id = -state.NextNonUserMessageId; Ts = System.DateTime.Now; Content = SystemMessage txt }]
             | _ -> []
 
         { state with
+            NextNonUserMessageId = state.NextNonUserMessageId + 1
             Messages = state.Messages @ appendMessage
             Users = state.Users |> Map.add user.Id user}, Cmd.none
 
@@ -71,9 +73,10 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
             state.Users |> getUserNick userId |> function
             | Some oldnick ->
                 let txt = sprintf "%s left the channel" oldnick
-                [{  Id = 0; Ts = System.DateTime.Now; Content = SystemMessage txt }]
+                [{  Id = -state.NextNonUserMessageId; Ts = System.DateTime.Now; Content = SystemMessage txt }]
             | _ -> []
         { state with
+            NextNonUserMessageId = state.NextNonUserMessageId + 1
             Messages = state.Messages @ appendMessage
             Users = state.Users |> Map.remove userId}, Cmd.none
 
