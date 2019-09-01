@@ -5,7 +5,7 @@ open Types
 open Browser.Dom
 
 let init () : Model * Cmd<Msg> =
-    {Users = Map.empty; Messages = []; MessageCount = 0; PostText = ""; Info = ChannelInfo.Empty}, Cmd.none
+    { NextNonUserMessageId = 1; Users = Map.empty; Messages = []; MessageCount = 0; PostText = ""; Info = ChannelInfo.Empty}, Cmd.none
 
 let init2 (chan: ChannelInfo, users: UserInfo list) : Model * Cmd<Msg> =
     { (fst <| init()) with Info = chan; Users = users |> List.map (fun u -> u.Id, u) |> Map.ofList }, Cmd.none
@@ -42,7 +42,7 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
         let limitedMessageList, messageCount = maxListLength maxMessages messagelist
         let messages = limitedMessageList |> List.map (fun (u, msg) -> mapMessage msg (mapUser users u))
         in
-        { Info = info; Messages = messages; MessageCount = messageCount; PostText = ""; Users = users }, Cmd.none
+        { state with Info = info; Messages = messages;  MessageCount = messageCount; PostText = ""; Users = users }, Cmd.none
     | Update info ->
         { state with Info = info }, Cmd.none
 
@@ -53,18 +53,24 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
     | AppendUserMessage (userId, message) ->
         let author = mapUser state.Users userId
         let message = mapMessage message author
+        let message, nextId =
+            if message.Id = 0 then
+                { message with Id = -state.NextNonUserMessageId }, state.NextNonUserMessageId + 1
+            else
+                message, state.NextNonUserMessageId
         let messages, messageCount = maxListLength maxMessages (state.Messages @ [message])
-        in
-        { state with Messages = messages; MessageCount = messageCount }, Cmd.none
+
+        { state with NextNonUserMessageId = nextId; Messages = messages; MessageCount = messageCount }, Cmd.none
 
     | UserJoined user ->
         let systemMessage = {
-            Id = 0; Ts = System.DateTime.Now
+            Id = -state.NextNonUserMessageId; Ts = System.DateTime.Now
             Content = SystemMessage <| sprintf "%s joined the channel" user.Nick }
 
         let messages, messageCount = maxListLength maxMessages (state.Messages @ [systemMessage])
         { state with
-            Messages = messages
+            NextNonUserMessageId = state.NextNonUserMessageId + 1
+            Messages = state.Messages @ [systemMessage]
             MessageCount = messageCount
             Users = state.Users |> Map.add user.Id user}, Cmd.none
 
@@ -73,12 +79,13 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
             state.Users |> getUserNick user.Id |> function
             | Some oldnick when oldnick <> user.Nick ->
                 let txt = sprintf "%s is now known as %s" oldnick user.Nick
-                [{  Id = 0; Ts = System.DateTime.Now; Content = SystemMessage txt }]
+                [{  Id = -state.NextNonUserMessageId; Ts = System.DateTime.Now; Content = SystemMessage txt }]
             | _ -> []
 
         let messages, messageCount = maxListLength maxMessages (state.Messages @ appendMessage)
         { state with
-            Messages = messages
+            NextNonUserMessageId = state.NextNonUserMessageId + 1
+            Messages = state.Messages @ appendMessage
             MessageCount = messageCount
             Users = state.Users |> Map.add user.Id user}, Cmd.none
 
@@ -87,12 +94,13 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
             state.Users |> getUserNick userId |> function
             | Some oldnick ->
                 let txt = sprintf "%s left the channel" oldnick
-                [{  Id = 0; Ts = System.DateTime.Now; Content = SystemMessage txt }]
+                [{  Id = -state.NextNonUserMessageId; Ts = System.DateTime.Now; Content = SystemMessage txt }]
             | _ -> []
 
         let messages, messageCount = maxListLength maxMessages (state.Messages @ appendMessage)
         { state with
-            Messages = messages
+            NextNonUserMessageId = state.NextNonUserMessageId + 1
+            Messages = state.Messages @ appendMessage
             MessageCount = messageCount
             Users = state.Users |> Map.remove userId}, Cmd.none
 

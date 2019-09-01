@@ -26,6 +26,7 @@ type ChannelInfo = {
 } with static member Empty = {Id = null; Name = null; Topic = ""; UserCount = 0}
 
 type Model = {
+    NextNonUserMessageId: int
     Info: ChannelInfo
     Users: Map<UserId, UserInfo>
     Messages: Message Envelope list
