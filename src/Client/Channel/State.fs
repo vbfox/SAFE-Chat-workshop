@@ -42,8 +42,13 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
     | AppendUserMessage (userId, message) ->
         let author = mapUser state.Users userId
         let message = mapMessage message author
+        let message, nextId =
+            if message.Id = 0 then
+                { message with Id = -state.NextNonUserMessageId }, state.NextNonUserMessageId + 1
+            else
+                message, state.NextNonUserMessageId
         in
-        { state with Messages = state.Messages @ [message] }, Cmd.none
+        { state with NextNonUserMessageId = nextId; Messages = state.Messages @ [message] }, Cmd.none
 
     | UserJoined user ->
         let systemMessage = {
