@@ -1,5 +1,7 @@
+[<AutoOpen>]
 module Utils
 
+open Fable.Core
 open Fable.React
 
 [<ImportDefault("memoize-one")>]
