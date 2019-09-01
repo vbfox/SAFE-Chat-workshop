@@ -30,7 +30,7 @@ let spamText =
         "Why can't she have egg 🥚 bacon 🥓 spam and sausage?"
         "THAT'S got spam in it!"
         "Hasn't got as much spam in it as spam egg 🥚 sausage and spam, has it?"
-        "[🎶 Spam spam spam spam 🎶 *(crescendo through next few lines)*"
+        "[🎶 Spam spam spam spam 🎶](https://www.youtube.com/watch?v=mBcY3W5WgNU) *(crescendo through next few lines)*"
         "Could you do the egg bacon 🥓 spam and sausage without the spam then?"
         "Urgghh!"
         "What do you mean 'Urgghh'? I don't like spam!"
