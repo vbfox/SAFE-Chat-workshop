@@ -28,7 +28,7 @@ let mainArea = elmishView "MainArea" NoMemoization <| fun { model = model; dispa
 
 let root model dispatch =
     let menu = NavMenu.View.menu {
-        chatData = model.chat
+        chatData = NavMenu.View.menuModelFromServer model.chat
         currentPage = model.currentPage
         dispatch = (ApplicationMsg >> ChatDataMsg >> dispatch)
     }
