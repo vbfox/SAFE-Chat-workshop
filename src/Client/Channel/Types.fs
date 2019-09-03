@@ -29,6 +29,7 @@ type Model = {
     Info: ChannelInfo
     Users: Map<UserId, UserInfo>
     Messages: Message Envelope list
+    MessageCount: int
     PostText: string
 }
 

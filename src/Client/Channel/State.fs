@@ -5,7 +5,7 @@ open Types
 open Browser.Dom
 
 let init () : Model * Cmd<Msg> =
-    {Users = Map.empty; Messages = []; PostText = ""; Info = ChannelInfo.Empty}, Cmd.none
+    {Users = Map.empty; Messages = []; MessageCount = 0; PostText = ""; Info = ChannelInfo.Empty}, Cmd.none
 
 let init2 (chan: ChannelInfo, users: UserInfo list) : Model * Cmd<Msg> =
     { (fst <| init()) with Info = chan; Users = users |> List.map (fun u -> u.Id, u) |> Map.ofList }, Cmd.none
@@ -25,33 +25,47 @@ let mapUser users userId =
 let mapMessage { Id = id; Ts = ts; Content = text} author =
     { Id = id; Ts = ts; Content = UserMessage (text, author) }
 
+let private maxListLength (len: int) (lst: list<_>) =
+    let listLength = lst.Length
+    if listLength > len then
+        lst |> List.skip (listLength - len), listLength
+    else
+        lst, listLength
+
+let private maxMessages = 1000
+
 let update (msg: Msg) state: (Model * Msg Cmd) =
 
     match msg with
     | Init (info, userlist, messagelist) ->
         let users = userlist |> List.map (fun u -> u.Id, u) |> Map.ofList
-        let messages = messagelist |> List.map (fun (u, msg) -> mapMessage msg (mapUser users u))
+        let limitedMessageList, messageCount = maxListLength maxMessages messagelist
+        let messages = limitedMessageList |> List.map (fun (u, msg) -> mapMessage msg (mapUser users u))
         in
-        { Info = info; Messages = messages; PostText = ""; Users = users }, Cmd.none
+        { Info = info; Messages = messages; MessageCount = messageCount; PostText = ""; Users = users }, Cmd.none
     | Update info ->
         { state with Info = info }, Cmd.none
 
     | AppendMessage message ->
-        { state with Messages = state.Messages @ [message] }, Cmd.none
+        let messages, messageCount = maxListLength maxMessages (state.Messages @ [message])
+        { state with Messages = messages; MessageCount = messageCount }, Cmd.none
 
     | AppendUserMessage (userId, message) ->
         let author = mapUser state.Users userId
         let message = mapMessage message author
+        let messages, messageCount = maxListLength maxMessages (state.Messages @ [message])
         in
-        { state with Messages = state.Messages @ [message] }, Cmd.none
+        { state with Messages = messages; MessageCount = messageCount }, Cmd.none
 
     | UserJoined user ->
         let systemMessage = {
             Id = 0; Ts = System.DateTime.Now
             Content = SystemMessage <| sprintf "%s joined the channel" user.Nick }
 
+        let messages, messageCount = maxListLength maxMessages (state.Messages @ [systemMessage])
         { state with
-            Messages = state.Messages @ [systemMessage]
+            Messages = messages
+            MessageCount = messageCount
             Users = state.Users |> Map.add user.Id user}, Cmd.none
 
     | UserUpdated user ->
@@ -62,8 +76,10 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
                 [{  Id = 0; Ts = System.DateTime.Now; Content = SystemMessage txt }]
             | _ -> []
 
+        let messages, messageCount = maxListLength maxMessages (state.Messages @ appendMessage)
         { state with
-            Messages = state.Messages @ appendMessage
+            Messages = messages
+            MessageCount = messageCount
             Users = state.Users |> Map.add user.Id user}, Cmd.none
 
     | UserLeft userId ->
@@ -73,8 +89,11 @@ let update (msg: Msg) state: (Model * Msg Cmd) =
                 let txt = sprintf "%s left the channel" oldnick
                 [{  Id = 0; Ts = System.DateTime.Now; Content = SystemMessage txt }]
             | _ -> []
+
+        let messages, messageCount = maxListLength maxMessages (state.Messages @ appendMessage)
         { state with
-            Messages = state.Messages @ appendMessage
+            Messages = messages
+            MessageCount = messageCount
             Users = state.Users |> Map.remove userId}, Cmd.none
 
     | SetPostText text ->

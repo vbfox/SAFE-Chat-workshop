@@ -20,7 +20,7 @@ let mainArea = elmishView "MainArea" NoMemoization <| fun { model = model; dispa
 
             | Channel chan, Connected { serverData = { Channels = channels } } when channels |> Map.containsKey chan ->
                 let dispatchChannelMessage m = ChatServer.Types.ChannelMsg(chan, m) |> ApplicationMsg |> ChatDataMsg |> dispatch
-                fragment [] (Channel.View.root channels.[chan] dispatchChannelMessage)
+                Channel.View.channel { model = channels.[chan]; dispatch = dispatchChannelMessage }
 
             | _ ->
                 div [] [ str "bad channel route" ])
