@@ -12,6 +12,10 @@ type RootProps = {
     dispatch: App.Types.Msg -> unit
 }
 
+let private getDispatchChannelMessage = memoizeOnceTupled (fun (dispatch: App.Types.Msg -> unit, chan: string) ->
+    fun m ->
+        ChatServer.Types.ChannelMsg(chan, m) |> ApplicationMsg |> ChatDataMsg |> dispatch)
+
 let mainArea = elmishView "MainArea" NoMemoization <| fun { model = model; dispatch = dispatch; } ->
     div [ ClassName "col-xs-12 col-md-8 fs-chat" ]
         [
@@ -19,18 +23,30 @@ let mainArea = elmishView "MainArea" NoMemoization <| fun { model = model; dispa
             | Route.Overview, _ -> Overview.View.root
 
             | Channel chan, Connected { serverData = { Channels = channels } } when channels |> Map.containsKey chan ->
-                let dispatchChannelMessage m = ChatServer.Types.ChannelMsg(chan, m) |> ApplicationMsg |> ChatDataMsg |> dispatch
+                let dispatchChannelMessage = getDispatchChannelMessage (dispatch, chan)
                 Channel.View.channel { model = channels.[chan]; dispatch = dispatchChannelMessage }
 
             | _ ->
                 div [] [ str "bad channel route" ])
         ]
 
+let private getMenuDispatch = memoizeOnce (fun (dispatch: App.Types.Msg -> unit) ->
+    ApplicationMsg >> ChatDataMsg >> dispatch)
+
+let mutable stableDispatch = None
+
 let root model dispatch =
+    let dispatch =
+        match stableDispatch with
+        | None ->
+            stableDispatch <- Some dispatch
+            dispatch
+        | Some x -> x
+
     let menu = NavMenu.View.menu {
         chatData = NavMenu.View.menuModelFromServer model.chat
         currentPage = model.currentPage
-        dispatch = (ApplicationMsg >> ChatDataMsg >> dispatch)
+        dispatch = getMenuDispatch dispatch
     }
 
     div [ ClassName "container" ]
