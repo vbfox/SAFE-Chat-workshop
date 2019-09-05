@@ -1,5 +1,8 @@
-var path = require("path");
-var webpack = require("webpack");
+const path = require("path");
+const webpack = require("webpack");
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 function resolve(filePath) {
     return path.isAbsolute(filePath) ? filePath : path.join(__dirname, filePath);
@@ -7,7 +10,6 @@ function resolve(filePath) {
 
 var CONFIG = {
     fsharpEntry: './client.fsproj',
-    outputDir: './public',
     babel: {
         presets: [
             ['@babel/preset-env', {
@@ -27,13 +29,27 @@ module.exports = (env, argv) => {
     var port = process.env.SUAVE_FABLE_PORT || "8083";
     console.log("Bundling for " + mode + "...");
 
+    const plugins = [
+        new CleanWebpackPlugin(),
+        new HtmlWebpackPlugin({
+            template: "public/index.html"
+        }),
+        new CopyPlugin([
+            { from: 'public', to: '.', ignore: 'public/index.html' },
+          ]),
+    ];
+
+    if (isProduction) {
+        plugins.push(new webpack.HotModuleReplacementPlugin());
+        plugins.push(new webpack.NamedModulesPlugin());
+    }
+
     return {
         mode,
         devtool: "source-map",
         entry: resolve(CONFIG.fsharpEntry),
         output: {
             filename: 'bundle.js',
-            path: resolve(CONFIG.outputDir),
         },
         devServer: {
             proxy: [
@@ -87,9 +103,6 @@ module.exports = (env, argv) => {
                 }
             ]
         },
-        plugins: isProduction ? [] : [
-            new webpack.HotModuleReplacementPlugin(),
-            new webpack.NamedModulesPlugin()
-        ]
+        plugins
     };
 };
