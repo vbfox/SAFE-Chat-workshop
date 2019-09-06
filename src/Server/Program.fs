@@ -73,14 +73,15 @@ let main argv =
         let _, webServer = startWebServerAsync config app
         do! App.startChatServer()
         do! webServer
-     
+
         return ()
     }
 
+    logger.info(Message.eventX "Starting server on {ip}:{port}"  >> Message.setFieldValue "ip" args.IP  >> Message.setFieldValue "port" args.Port)
     Async.Start (application, cts.Token)
 
     //kill the server
-    printfn "type 'q' to gracefully stop"
+    logger.info(Message.eventX  "type '{letter}' to gracefully stop"  >> Message.setFieldValue "letter" 'q')
     while "q" <> System.Console.ReadLine() do ()
     cts.Cancel()
 
