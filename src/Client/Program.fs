@@ -4,7 +4,8 @@ open Elmish
 open Elmish.UrlParser
 open Fable.Core.JsInterop
 
-importAll "./sass/app.scss"
+importSideEffects  "./sass/app.scss"
+importSideEffects  "bootstrap/dist/css/bootstrap.min.css"
 
 open Elmish.React
 open Elmish.Debug
