@@ -46,7 +46,7 @@ module.exports = (env, argv) => {
           ]),
     ];
 
-    if (isProduction) {
+    if (!isProduction) {
         plugins.push(new webpack.HotModuleReplacementPlugin());
         plugins.push(new webpack.NamedModulesPlugin());
     }
