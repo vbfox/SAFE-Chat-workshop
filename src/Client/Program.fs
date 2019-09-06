@@ -4,8 +4,9 @@ open Elmish
 open Elmish.UrlParser
 open Fable.Core.JsInterop
 
-importSideEffects  "bootstrap/dist/css/bootstrap.min.css"
-importSideEffects  "./sass/app.scss"
+importSideEffects "bootstrap/dist/css/bootstrap.min.css"
+importSideEffects "typeface-roboto"
+importSideEffects "./sass/app.scss"
 
 open Elmish.React
 open Elmish.Debug
