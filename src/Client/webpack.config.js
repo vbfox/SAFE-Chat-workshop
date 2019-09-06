@@ -1,8 +1,10 @@
+//@ts-check
 const path = require("path");
 const webpack = require("webpack");
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const WriteFilePlugin = require('write-file-webpack-plugin');
 
 function resolve(filePath) {
     return path.isAbsolute(filePath) ? filePath : path.join(__dirname, filePath);
@@ -30,12 +32,17 @@ module.exports = (env, argv) => {
     console.log("Bundling for " + mode + "...");
 
     const plugins = [
+        new WriteFilePlugin(),
         new CleanWebpackPlugin(),
         new HtmlWebpackPlugin({
             template: "public/index.html"
         }),
         new CopyPlugin([
-            { from: 'public', to: '.', ignore: 'public/index.html' },
+            {
+                from: 'public',
+                to: '.',
+                ignore: ['public/index.html']
+            },
           ]),
     ];
 
