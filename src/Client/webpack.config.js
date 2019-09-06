@@ -35,7 +35,8 @@ module.exports = (env, argv) => {
         new WriteFilePlugin(),
         new CleanWebpackPlugin(),
         new HtmlWebpackPlugin({
-            template: "public/index.html"
+            template: "public/index.html",
+            favicon: "Public/img/favicon.ico"
         }),
         new CopyPlugin([
             {
