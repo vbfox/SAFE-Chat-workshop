@@ -19,6 +19,9 @@ html, body {
 
 	> .container {
 		height: 100%;
+		> .row {
+			height: 100%;
+		}
 	}
 }
 
